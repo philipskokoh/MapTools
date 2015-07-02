@@ -1,2 +1,2 @@
-# MapTools
+# maptools
 Javascript library for map applications
