@@ -1,0 +1,28 @@
+{
+  "name": "maptools",
+  "version": "0.0.1",
+  "homepage": "https://github.com/philipskokoh/maptools",
+  "description": "Javascript library for map application",
+  "moduleType": [
+    "globals"
+  ],
+  "keywords": [
+    "map",
+    "leaflet",
+    "contour"
+  ],
+  "authors": [
+    "philipskokoh"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "d3": "~3.5.5"
+  }
+}
