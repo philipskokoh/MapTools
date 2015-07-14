@@ -52,11 +52,14 @@
       _generateContour();
       var padding = 10;
       var numLevel = colours.length;
+      var container = L.DomUtil.create('div')
+      container.setAttribute('id', _param.id);
+      map.getPanes().overlayPane.appendChild(container);
 
       var drawLayer = function() {
         console.time('draw contour');
-        d3.select("#overlayCenter").remove();
-        d3.select("#overlayRect").remove();
+        d3.select('#' + _param.id + '> .overlayCenter').remove();
+        d3.select('#' + _param.id + '> .overlayRect').remove();
 
         var cdata = [];
         for (var y=0;y<_gridY.length;y++) {
@@ -72,9 +75,8 @@
         var bounds = map.getBounds();
         var topLeft = map.latLngToLayerPoint(bounds.getNorthWest());
 
-        var svgCenter = d3.select(map.getPanes().overlayPane).append("svg")
-          .attr("id", "overlayCenter")
-          .attr("class", "leaflet-zoom-hide")
+        var svgCenter = d3.select('#' + _param.id).append("svg")
+          .attr("class", "overlayCenter leaflet-zoom-hide")
           .style("width", map.getSize().x + "px")
           .style("height", map.getSize().y + "px")
           .style("margin-left", topLeft.x + "px")
@@ -100,10 +102,9 @@
         })
         .attr("r", 3);
 
-        var svg = d3.select(map.getPanes().overlayPane).append("svg")
+        var svg = d3.select('#' + _param.id).append("svg")
           .attr("opacity",0.4)
-          .attr("id", "overlayRect")
-          .attr("class", "leaflet-zoom-hide")
+          .attr("class", "overlayRect leaflet-zoom-hide")
           .style("width", map.getSize().x + "px")
           .style("height", map.getSize().y + "px")
           .style("margin-left", topLeft.x + "px")
