@@ -158,8 +158,16 @@
         }
       };
       map.addLayer(_mapLayer);
+    };
 
-    }
+    this.hide = function() {
+      _mapLayer.hide();
+    };
+
+    this.show = function(map) {
+      _mapLayer.show();
+    };
+
   };
 
 
