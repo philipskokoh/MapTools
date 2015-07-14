@@ -16,6 +16,9 @@
     var _zData;
     var _zAggr;
 
+    var _mapLayer;
+    var _isViewReset;
+
     this.addData = function(d) {
       _data.push(d);
     };
@@ -57,6 +60,10 @@
       map.getPanes().overlayPane.appendChild(container);
 
       var drawLayer = function() {
+        if (d3.select('#' + _param.id).style('opacity') == 0) {
+          _isViewReset = true;
+          return;
+        }
         console.time('draw contour');
         d3.select('#' + _param.id + '> .overlayCenter').remove();
         d3.select('#' + _param.id + '> .overlayRect').remove();
@@ -130,15 +137,27 @@
           .attr('height', rectSize);
 
         console.timeEnd('draw contour');
+        _isViewReset = false;
       };
 
-      var mapLayer = {
+      _mapLayer = {
         onAdd: function(m) {
           m.on('viewreset moveend', drawLayer);
           drawLayer();
+        },
+        hide: function() {
+          d3.selectAll('#' + _param.id)
+            .style('opacity', 0);
+        },
+        show: function() {
+          d3.selectAll('#' + _param.id)
+            .style('opacity', 1);
+          if (_isViewReset) {
+            drawLayer();
+          }
         }
       };
-      map.addLayer(mapLayer);
+      map.addLayer(_mapLayer);
 
     }
   };
