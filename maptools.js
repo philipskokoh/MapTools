@@ -2,7 +2,7 @@
   'use strict';
 
   window.MapTools = window.MapTools || {};
-  MapTools.version = '0.1.0';
+  MapTools.version = '0.2.0';
 
   MapTools.ContourGrid = function(param) {
     var colours = ['#000099','#0000FF','#3399FF','#00CCFF','#00CC00','#66FF00','#FFFF00','#CC0000','#FF6633'];
@@ -20,6 +20,7 @@
     var _isViewReset;
 
     this.addData = function(d) {
+      if (!d.weight) d.weight = 1;
       _data.push(d);
     };
 
@@ -37,7 +38,7 @@
       for (var i=0;i<_zData.length;i++) {
         for (var y=0;y<_gridY.length;y++) {
           for (var x=0;x<_gridX.length;x++) {
-            _zAggr[y][x] = _zAggr[y][x] + _zData[i][y][x];
+            _zAggr[y][x] = _zAggr[y][x] + _zData[i][y][x]*_data[i].weight;
           }
         } 
       }
@@ -69,12 +70,51 @@
         d3.select('#' + _param.id + '> .overlayRect').remove();
 
         var cdata = [];
+        var rectSize = map.latLngToLayerPoint(new L.LatLng( _gridY[0], _gridX[1])).x 
+          - map.latLngToLayerPoint(new L.LatLng( _gridY[0], _gridX[0])).x;
         for (var y=0;y<_gridY.length;y++) {
+          var isScanning = false;
+          var curVal = 0;
+          var sline = null;
+          var prevX = null;
           for (var x=0;x<_gridX.length;x++) {
-            var point = map.latLngToLayerPoint(new L.LatLng( _gridY[y], _gridX[x]));
             var v = Math.round((_zAggr[y][x]-vmin)/(vmax-vmin)*numLevel);
-            if (v == 0) continue;
-            cdata.push( {x: point.x, y: point.y, val: v} );
+            if (v == 0) {
+              if (isScanning) {
+                cdata.push(sline);
+                isScanning = false;
+              }
+              continue;
+            }
+            if (isScanning) {
+              if (v == sline.val) {
+                var point = map.latLngToLayerPoint(new L.LatLng( _gridY[y], _gridX[x]));
+                sline.width = sline.width + (point.x - prevX);
+                prevX = point.x;
+              } else {
+                cdata.push(sline);
+                var point = map.latLngToLayerPoint(new L.LatLng( _gridY[y], _gridX[x]));
+                sline = {
+                  x: point.x,
+                  y: point.y,
+                  val: v,
+                  width: rectSize,
+                  height: rectSize
+                };
+                prevX = point.x;
+              }
+            } else {
+              var point = map.latLngToLayerPoint(new L.LatLng( _gridY[y], _gridX[x]));
+              sline = {
+                x: point.x,
+                y: point.y,
+                val: v,
+                width: rectSize,
+                height: rectSize
+              };
+              prevX = point.x
+              isScanning = true;
+            }
           }
         }
         //console.log(cdata.length);
@@ -82,13 +122,41 @@
         var bounds = map.getBounds();
         var topLeft = map.latLngToLayerPoint(bounds.getNorthWest());
 
+        var tooltip = d3.select('#' + _param.id).append("div")
+          .attr('class', 'map-tooltip')
+          .style('opacity', 0);
+
+        var svg = d3.select('#' + _param.id).append("svg")
+          .attr("opacity",0.6)
+          .attr("class", "overlayRect leaflet-zoom-hide")
+          .style("width", map.getSize().x + "px")
+          .style("height", map.getSize().y + "px")
+          .style("margin-left", topLeft.x + "px")
+          .style("margin-top", topLeft.y + "px");
+
+        var gRect = svg.append("g")
+          .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+
+        var svgRects = gRect
+          .attr("class", "grid")
+          .selectAll("g")
+          .data(cdata)
+          .enter()
+          .append("g")
+          .attr("class", "cell");
+
+        svgRects.append("rect")
+          .style("fill", function(d) { return colours[d.val-1]; })
+          .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+          .attr('width', function(d) { return d.width; })
+          .attr('height', function(d) { return d.height; });
+
         var svgCenter = d3.select('#' + _param.id).append("svg")
           .attr("class", "overlayCenter leaflet-zoom-hide")
           .style("width", map.getSize().x + "px")
           .style("height", map.getSize().y + "px")
           .style("margin-left", topLeft.x + "px")
           .style("margin-top", topLeft.y + "px");
-
 
         var gCenter = svgCenter.append("g")
           .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
@@ -102,39 +170,26 @@
           .attr("class", "point");
 
         svgCenters.append("circle")
+        .attr('id', function(d) { return d.id; })
         .style("fill", '#000')
         .attr("transform", function(d) { 
           var p = map.latLngToLayerPoint(new L.LatLng(d.muy, d.mux));
           return "translate(" + p.x + "," + p.y + ")"; 
         })
-        .attr("r", 3);
-
-        var svg = d3.select('#' + _param.id).append("svg")
-          .attr("opacity",0.4)
-          .attr("class", "overlayRect leaflet-zoom-hide")
-          .style("width", map.getSize().x + "px")
-          .style("height", map.getSize().y + "px")
-          .style("margin-left", topLeft.x + "px")
-          .style("margin-top", topLeft.y + "px");
-
-        var gRect = svg.append("g")
-          .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
-
-        var svgRects = gRect
-          .attr("class", "points")
-          .selectAll("g")
-          .data(cdata)
-          .enter()
-          .append("g")
-          .attr("class", "point");
-
-        var rectSize = Math.round(cdata[1].x - cdata[0].x);
-        // console.log(rectSize);
-        svgRects.append("rect")
-          .style("fill", function(d) { return colours[d.val-1]; })
-          .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-          .attr('width', rectSize)
-          .attr('height', rectSize);
+        .attr("r", 3)
+        .on('mouseover', function(d) {
+          tooltip.transition()
+            .duration(500)
+            .style('opacity', .9);
+          tooltip.html('<p>' + d.id + '</p>')
+            .style("left", (d3.event.pageX)-30 + "px")
+            .style("top", (d3.event.pageY - 30) + "px"); 
+        })
+        .on('mouseout', function(d) {
+          tooltip.transition()
+            .duration(500)
+            .style('opacity', 0);
+        });
 
         console.timeEnd('draw contour');
         _isViewReset = false;
